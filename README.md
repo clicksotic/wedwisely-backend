@@ -47,18 +47,16 @@ wedwisely_backend/
 ├── server.js              # Main server entry point
 ├── package.json           # Dependencies and scripts
 ├── package-lock.json      # Locked dependency versions
-├── .env.example          # Environment variables template
 ├── .gitignore            # Git ignore patterns
 ├── README.md             # This file
-├── src/                  # Source code directory
-│   ├── routes/           # API route definitions
-│   ├── controllers/      # Business logic controllers
-│   ├── models/           # Data models
-│   ├── middleware/       # Custom middleware
-│   └── utils/            # Utility functions
-├── config/               # Configuration files
+├── .eslintrc.js          # ESLint configuration
+├── jest.config.js        # Jest testing configuration
 ├── tests/                # Test files
-└── docs/                 # API documentation
+│   ├── server.test.js    # Server endpoint tests
+│   └── setup.js          # Test setup configuration
+├── Dockerfile            # Docker container configuration
+├── docker-compose.yml    # Docker services configuration
+└── LICENSE               # MIT License
 ```
 
 ## 🛠️ Technology Stack
@@ -96,18 +94,15 @@ The server is configured through:
 |----------|--------|-------------|
 | `/` | GET | Welcome message and server status |
 | `/health` | GET | Health check endpoint |
+| `/api` | GET | API endpoints information |
 | `/api/weddings` | GET | Get all weddings |
 | `/api/weddings` | POST | Create new wedding |
-| `/api/weddings/:id` | GET | Get wedding by ID |
-| `/api/weddings/:id` | PUT | Update wedding |
-| `/api/weddings/:id` | DELETE | Delete wedding |
 
 ## 🚀 Features
 
 - **RESTful API** - Clean and intuitive API design
 - **CORS Support** - Cross-origin request handling
 - **Health Monitoring** - Built-in health check endpoints
-- **Static File Serving** - Serve static assets
 - **JSON Response** - Consistent JSON API responses
 - **Error Handling** - Comprehensive error management
 - **Logging** - Detailed server logging
@@ -154,6 +149,9 @@ docker build -t wedwisely-backend .
 
 # Run Docker container
 docker run -p 3000:3000 wedwisely-backend
+
+# Using Docker Compose
+docker-compose up -d
 ```
 
 ## 🤝 Contributing
