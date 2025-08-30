@@ -7,6 +7,7 @@ require('dotenv').config();
 
 const config = require('./config');
 const database = require('./config/database');
+const { globalErrorHandler } = require('./src/utils/errorHandler');
 
 const app = express();
 const serverConfig = config.getServerConfig();
@@ -73,7 +74,7 @@ app.use(async (req, res, next) => {
 // Basic route
 app.get('/', (req, res) => {
   res.json({
-    message: 'Welcome to Node.js REST API',
+    message: 'Welcome to WedWisely Backend API',
     status: 'Server is running',
     environment: config.currentEnvironment,
     database: database.getStatus(),
@@ -115,6 +116,12 @@ app.get('/api/db/status', (req, res) => {
   });
 });
 
+// Authentication routes
+app.use('/api/auth', require('./src/auth/routes/authRoutes'));
+
+// User management routes
+app.use('/api/users', require('./src/auth/routes/userRoutes'));
+
 // API routes placeholder
 app.get('/api', (req, res) => {
   res.json({
@@ -122,7 +129,17 @@ app.get('/api', (req, res) => {
     version: '1.0.0',
     environment: config.currentEnvironment,
     database: database.getStatus(),
-    endpoints: ['/', '/health', '/api', '/api/environment', '/api/db/status']
+    endpoints: [
+      '/',
+      '/health', 
+      '/api',
+      '/api/environment', 
+      '/api/db/status',
+      '/api/auth/register',
+      '/api/auth/login',
+      '/api/auth/me',
+      '/api/users/all'
+    ]
   });
 });
 
@@ -135,19 +152,8 @@ app.use('*', (req, res) => {
   });
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  if (loggingConfig.enableErrorLogging) {
-    console.error('Error:', err);
-  }
-  
-  res.status(500).json({
-    error: 'Internal server error',
-    message: 'Something went wrong on our end',
-    environment: config.currentEnvironment,
-    timestamp: new Date().toISOString()
-  });
-});
+// Global error handler
+app.use(globalErrorHandler);
 
 // Start server
 app.listen(serverConfig.port, serverConfig.host, () => {
@@ -155,6 +161,8 @@ app.listen(serverConfig.port, serverConfig.host, () => {
   console.log(`🌍 Environment: ${config.currentEnvironment}`);
   console.log(`📍 Local: http://${serverConfig.host}:${serverConfig.port}`);
   console.log(`💚 Health: http://${serverConfig.host}:${serverConfig.port}/health`);
+  console.log(`🔐 Auth: http://${serverConfig.host}:${serverConfig.port}/api/auth`);
+  console.log(`👥 Users: http://${serverConfig.host}:${serverConfig.port}/api/users`);
   console.log(`️ Database: MongoDB (${config.currentEnvironment})`);
 });
 
