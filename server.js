@@ -122,6 +122,9 @@ app.use('/api/auth', require('./src/auth/routes/authRoutes'));
 // User management routes
 app.use('/api/users', require('./src/auth/routes/userRoutes'));
 
+// Profile routes
+app.use('/api/profiles', require('./src/profile/routes/profileRoutes'));
+
 // API routes placeholder
 app.get('/api', (req, res) => {
   res.json({
@@ -138,10 +141,18 @@ app.get('/api', (req, res) => {
       '/api/auth/register',
       '/api/auth/login',
       '/api/auth/me',
-      '/api/users/all'
+      '/api/users/all',
+
+      // 👇 Profile endpoints added
+      '/api/profiles',
+      '/api/profiles/me',
+      '/api/profiles/create',
+      '/api/profiles/update',
+      '/api/profiles/delete'
     ]
   });
 });
+
 
 // 404 handler
 app.use('*', (req, res) => {
