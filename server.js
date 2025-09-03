@@ -15,6 +15,9 @@ const corsConfig = config.getCorsConfig();
 const loggingConfig = config.getLoggingConfig();
 const featuresConfig = config.getFeaturesConfig();
 
+const swaggerUi = require("swagger-ui-express");
+const swaggerSpec = require("./config/swagger");
+
 // Security middleware (conditional based on environment)
 if (featuresConfig.enableHelmet) {
   app.use(helmet());
@@ -125,6 +128,12 @@ app.use('/api/users', require('./src/auth/routes/userRoutes'));
 // Profile routes
 app.use('/api/profiles', require('./src/profile/routes/profileRoutes'));
 
+// Events routes
+app.use('/api/events', require('./src/event/routes/eventRoutes'));
+
+// Swagger routes
+app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 // API routes placeholder
 app.get('/api', (req, res) => {
   res.json({
@@ -133,23 +142,31 @@ app.get('/api', (req, res) => {
     environment: config.currentEnvironment,
     database: database.getStatus(),
     endpoints: [
-      '/',
-      '/health', 
-      '/api',
-      '/api/environment', 
-      '/api/db/status',
-      '/api/auth/register',
-      '/api/auth/login',
-      '/api/auth/me',
-      '/api/users/all',
-
-      // 👇 Profile endpoints added
-      '/api/profiles',
-      '/api/profiles/me',
-      '/api/profiles/create',
-      '/api/profiles/update',
-      '/api/profiles/delete'
-    ]
+          '/',
+          '/health', 
+          '/api',
+          '/api/environment', 
+          '/api/db/status',
+          '/api/auth/register',
+          '/api/auth/login',
+          '/api/auth/me',
+          '/api/users/all',
+        
+          // 👇 Profile endpoints
+          '/api/profiles',
+          '/api/profiles/me',
+          '/api/profiles/create',
+          '/api/profiles/update',
+          '/api/profiles/delete',
+        
+          // 👇 Event endpoints
+          '/api/events/create',
+          '/api/events/:id',
+          '/api/events/me/all',
+          '/api/events/update/:id',
+          '/api/events/delete/:id',
+          '/api/events/all'
+        ]
   });
 });
 
@@ -174,6 +191,9 @@ app.listen(serverConfig.port, serverConfig.host, () => {
   console.log(`💚 Health: http://${serverConfig.host}:${serverConfig.port}/health`);
   console.log(`🔐 Auth: http://${serverConfig.host}:${serverConfig.port}/api/auth`);
   console.log(`👥 Users: http://${serverConfig.host}:${serverConfig.port}/api/users`);
+  console.log(`👤 Profiles: http://${serverConfig.host}:${serverConfig.port}/api/profiles`);
+  console.log(`🌆 Events: http://${serverConfig.host}:${serverConfig.port}/api/events`);
+  console.log(`🔍 Swagger: http://${serverConfig.host}:${serverConfig.port}/api/docs`);
   console.log(`️ Database: MongoDB (${config.currentEnvironment})`);
 });
 
