@@ -15,7 +15,7 @@ const options = {
     },
     servers: [
       {
-        url: `http://${serverConfig.host}:${serverConfig.port}/api`, // 👈 dynamic from config
+        url: `http://${serverConfig.host}:${serverConfig.port}/api`, // �� dynamic from config
         description: `${currentEnvironment} server`,
       },
     ],
@@ -35,9 +35,11 @@ const options = {
     ],
   },
   apis: [
-    path.join(__dirname, "../src/user/routes/*.js"),
+    path.join(__dirname, "../src/auth/routes/*.js"),
     path.join(__dirname, "../src/profile/routes/*.js"),
     path.join(__dirname, "../src/event/routes/*.js"),
+    path.join(__dirname, "../src/services/routes/*.js"),
+    path.join(__dirname, "../src/services-media/routes/*.js"),
   ],
 };
 

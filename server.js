@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require("path");
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
@@ -131,6 +132,12 @@ app.use('/api/profiles', require('./src/profile/routes/profileRoutes'));
 // Events routes
 app.use('/api/events', require('./src/event/routes/eventRoutes'));
 
+// Services routes
+app.use('/api/services', require('./src/services/routes/serviceRoutes'));
+
+// Service Media routes
+app.use("/api/services-media", require("./src/services-media/routes/serviceMediaRoutes"));
+
 // Swagger routes
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
@@ -165,7 +172,14 @@ app.get('/api', (req, res) => {
           '/api/events/me/all',
           '/api/events/update/:id',
           '/api/events/delete/:id',
-          '/api/events/all'
+          '/api/events/all',
+        
+          // 👇 Service endpoints
+          '/api/services',
+          '/api/services/:id',
+          '/api/services/my/services',
+          '/api/services/:id/media',
+          '/api/services/admin/all',
         ]
   });
 });
@@ -193,6 +207,8 @@ app.listen(serverConfig.port, serverConfig.host, () => {
   console.log(`👥 Users: http://${serverConfig.host}:${serverConfig.port}/api/users`);
   console.log(`👤 Profiles: http://${serverConfig.host}:${serverConfig.port}/api/profiles`);
   console.log(`🌆 Events: http://${serverConfig.host}:${serverConfig.port}/api/events`);
+  console.log(`🛍️  Services: http://${serverConfig.host}:${serverConfig.port}/api/services`);
+  console.log(`📸 Service Media: http://${serverConfig.host}:${serverConfig.port}/api/services-media`);
   console.log(`🔍 Swagger: http://${serverConfig.host}:${serverConfig.port}/api/docs`);
   console.log(`️ Database: MongoDB (${config.currentEnvironment})`);
 });

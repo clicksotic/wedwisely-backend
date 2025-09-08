@@ -1,0 +1,250 @@
+const Service = require("../models/Service");
+const ServiceMedia = require("../models/ServiceMedia");
+
+class ServiceService {
+  async createService(vendorId, data) {
+    const service = new Service({
+      vendor: vendorId,
+      name: data.name,
+      description: data.description,
+      category: data.category,
+      location: {
+        city: data.location.city,
+        country: data.location.country,
+      },
+      price: data.price,
+      baseImage: data.baseImage,
+    });
+
+    return await service.save();
+  }
+
+  async getService(serviceId) {
+    return await Service.findOne({ _id: serviceId, isActive: true })
+      .populate("vendor", "firstName lastName email")
+      .populate("media", "mediaUrl mediaType createdAt");
+  }
+
+  async getAllServices(filters = {}) {
+    const query = { isActive: true };
+    
+    // Apply filters
+    if (filters.city) {
+      query["location.city"] = new RegExp(filters.city, "i");
+    }
+    if (filters.country) {
+      query["location.country"] = new RegExp(filters.country, "i");
+    }
+    if (filters.category) {
+      query.category = filters.category;
+    }
+    if (filters.minPrice || filters.maxPrice) {
+      query.price = {};
+      if (filters.minPrice) query.price.$gte = Number(filters.minPrice);
+      if (filters.maxPrice) query.price.$lte = Number(filters.maxPrice);
+    }
+
+    // Pagination
+    const page = parseInt(filters.page) || 1;
+    const limit = parseInt(filters.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const services = await Service.find(query)
+      .populate("vendor", "firstName lastName email")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Service.countDocuments(query);
+
+    return {
+      services,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalServices: total,
+        hasNext: page < Math.ceil(total / limit),
+        hasPrev: page > 1,
+      },
+    };
+  }
+
+  async getServicesByVendor(vendorId) {
+    return await Service.find({ vendor: vendorId, isActive: true })
+      .populate("media", "mediaUrl mediaType createdAt")
+      .sort({ createdAt: -1 });
+  }
+
+  async updateService(serviceId, updates, vendorId) {
+    const service = await Service.findOne({ _id: serviceId, vendor: vendorId });
+    if (!service) return null;
+
+    // Update fields
+    if (updates.name !== undefined) service.name = updates.name;
+    if (updates.description !== undefined) service.description = updates.description;
+    if (updates.category !== undefined) service.category = updates.category;
+    if (updates.price !== undefined) service.price = updates.price;
+    if (updates.baseImage !== undefined) service.baseImage = updates.baseImage;
+    if (updates.isActive !== undefined) service.isActive = updates.isActive;
+
+    if (updates.location) {
+      if (updates.location.city !== undefined) service.location.city = updates.location.city;
+      if (updates.location.country !== undefined) service.location.country = updates.location.country;
+    }
+
+    return await service.save();
+  }
+
+  async deleteService(serviceId, vendorId) {
+    // Soft delete by setting isActive to false
+    return await Service.findOneAndUpdate(
+      { _id: serviceId, vendor: vendorId },
+      { isActive: false },
+      { new: true }
+    );
+  }
+
+  // Admin: Hard delete service
+  async adminDeleteService(serviceId) {
+    // Also delete all associated media
+    await ServiceMedia.deleteMany({ service: serviceId });
+    return await Service.findByIdAndDelete(serviceId);
+  }
+
+  // Service Media methods
+  async addServiceMedia(serviceId, mediaData, uploadedBy) {
+    // Verify service exists and belongs to the vendor
+    const service = await Service.findOne({ _id: serviceId, isActive: true });
+    if (!service) {
+      throw new Error("Service not found");
+    }
+
+    const serviceMedia = new ServiceMedia({
+      service: serviceId,
+      mediaUrl: mediaData.mediaUrl,
+      mediaType: mediaData.mediaType || "image",
+      uploadedBy: uploadedBy,
+    });
+
+    return await serviceMedia.save();
+  }
+
+  async getServiceMedia(serviceId) {
+    return await ServiceMedia.find({ service: serviceId, isActive: true })
+      .populate("uploadedBy", "firstName lastName")
+      .sort({ createdAt: -1 });
+  }
+
+  async deleteServiceMedia(mediaId, userId, userRole) {
+    const media = await ServiceMedia.findById(mediaId);
+    if (!media) return null;
+
+    // Check if user is the uploader, service owner, or admin
+    const service = await Service.findById(media.service);
+    const isOwner = service.vendor.toString() === userId;
+    const isUploader = media.uploadedBy.toString() === userId;
+    const isAdmin = userRole === "admin";
+
+    if (!isOwner && !isUploader && !isAdmin) {
+      throw new Error("Not authorized to delete this media");
+    }
+
+    return await ServiceMedia.findByIdAndUpdate(mediaId, { isActive: false }, { new: true });
+  }
+
+  // Admin: Get all services (including inactive)
+  async adminGetAllServices(filters = {}) {
+    const query = {};
+    
+    // Apply filters
+    if (filters.city) {
+      query["location.city"] = new RegExp(filters.city, "i");
+    }
+    if (filters.country) {
+      query["location.country"] = new RegExp(filters.country, "i");
+    }
+    if (filters.category) {
+      query.category = filters.category;
+    }
+    if (filters.isActive !== undefined) {
+      query.isActive = filters.isActive === "true";
+    }
+
+    // Pagination
+    const page = parseInt(filters.page) || 1;
+    const limit = parseInt(filters.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const services = await Service.find(query)
+      .populate("vendor", "firstName lastName email role")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Service.countDocuments(query);
+
+    return {
+      services,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalServices: total,
+        hasNext: page < Math.ceil(total / limit),
+        hasPrev: page > 1,
+      },
+    };
+  }
+  }
+
+
+  // Service Media methods
+
+  // Get all images for a service
+  async getServiceImages(serviceId) {
+    return await ServiceMedia.find({ service: serviceId, isActive: true })
+      .sort({ createdAt: -1 });
+  }
+
+  // Add image to service
+  async addImage(serviceId, imageUrl, uploadedBy) {
+    // Verify service exists
+    const service = await Service.findOne({ _id: serviceId, isActive: true });
+    if (!service) {
+      throw new Error("Service not found");
+    }
+
+    const image = new ServiceMedia({
+      service: serviceId,
+      mediaUrl: imageUrl,
+      mediaType: "image", // Always image
+      uploadedBy: uploadedBy,
+    });
+
+    return await image.save();
+  }
+
+  // Delete image
+  async deleteImage(imageId, userId, userRole) {
+    const image = await ServiceMedia.findById(imageId);
+    if (!image) return null;
+
+    // Check if user is the service owner or admin
+    const service = await Service.findById(image.service);
+    const isOwner = service.vendor.toString() === userId;
+    const isAdmin = userRole === "admin";
+
+    if (!isOwner && !isAdmin) {
+      throw new Error("Not authorized to delete this image");
+    }
+
+    // Soft delete
+    return await ServiceMedia.findByIdAndUpdate(imageId, { isActive: false }, { new: true });
+  }
+
+  // Get image by ID
+  async getImage(imageId) {
+    return await ServiceMedia.findOne({ _id: imageId, isActive: true });
+  }
+  }
+
+module.exports = new ServiceService();
