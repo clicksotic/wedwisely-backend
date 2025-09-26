@@ -50,6 +50,15 @@ if (featuresConfig.enableRateLimit) {
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Serve static files FIRST (before any other routes)
+app.use(express.static('public'));
+
+// Explicit route for the token extractor script
+app.get('/swagger-token-extractor.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  res.sendFile(path.join(__dirname, 'public', 'swagger-token-extractor.js'));
+});
+
 // Request logging (conditional)
 if (loggingConfig.enableRequestLogging) {
   app.use((req, res, next) => {
@@ -132,14 +141,85 @@ app.use('/api/profiles', require('./src/profile/routes/profileRoutes'));
 // Events routes
 app.use('/api/events', require('./src/event/routes/eventRoutes'));
 
+// Event-Service linking routes
+app.use('/api/events', require('./src/event/routes/eventServiceRoutes'));
+
 // Services routes
 app.use('/api/services', require('./src/services/routes/serviceRoutes'));
+
+// Service Approval routes
+app.use('/api/services', require('./src/services/routes/serviceApprovalRoutes'));
 
 // Service Media routes
 app.use("/api/services-media", require("./src/services-media/routes/serviceMediaRoutes"));
 
-// Swagger routes
-app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// Swagger routes with enhanced configuration
+app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  explorer: true,
+  swaggerOptions: {
+    persistAuthorization: true,
+    displayRequestDuration: true,
+    filter: true,
+    showExtensions: true,
+    showCommonExtensions: true,
+    tryItOutEnabled: true,
+    requestInterceptor: (req) => {
+      return req;
+    },
+    responseInterceptor: (res) => {
+      return res;
+    }
+  },
+  customCss: `
+    .swagger-ui .topbar { display: none; }
+    .swagger-ui .info .title { color: #3b82f6; }
+    .swagger-ui .scheme-container { background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; }
+    .swagger-ui .auth-wrapper { margin: 20px 0; }
+    .swagger-ui .auth-container { background: #f1f5f9; padding: 15px; border-radius: 6px; }
+    .swagger-ui .auth-btn-wrapper { margin: 10px 0; }
+    .swagger-ui .auth-btn-wrapper .btn-done { background: #10b981; }
+    .swagger-ui .auth-btn-wrapper .btn-done:hover { background: #059669; }
+    .swagger-ui .response-col_description__inner { position: relative; }
+    .auto-token-btn { 
+      background: #10b981; 
+      color: white; 
+      border: none; 
+      padding: 8px 16px; 
+      border-radius: 4px; 
+      cursor: pointer; 
+      margin: 10px 0;
+      font-size: 12px;
+    }
+    .auto-token-btn:hover { background: #059669; }
+  `,
+  customSiteTitle: "WedWisely API Documentation",
+  customJs: `
+    console.log('🚀 Swagger UI custom JS executing immediately');
+    console.log('🔍 Document ready state:', document.readyState);
+    console.log('🔍 Current URL:', window.location.href);
+    
+    // Load external token extractor
+    const script = document.createElement('script');
+    script.src = '/swagger-token-extractor.js';
+    script.onload = function() {
+      console.log('✅ External token extractor loaded');
+    };
+    script.onerror = function() {
+      console.log('❌ Failed to load external token extractor');
+    };
+    document.head.appendChild(script);
+    
+    console.log('✅ Script element added to head');
+  `
+}));
+
+// Test endpoint for static files
+app.get('/test-js', (req, res) => {
+  res.json({ 
+    message: 'Static file serving is working',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // API routes placeholder
 app.get('/api', (req, res) => {
@@ -173,6 +253,14 @@ app.get('/api', (req, res) => {
           '/api/events/update/:id',
           '/api/events/delete/:id',
           '/api/events/all',
+          
+          // 👇 Event-Service linking endpoints
+          '/api/events/:eventId/services',
+          '/api/events/:eventId/services/:serviceId',
+          '/api/events/:eventId/services/:serviceId/status',
+          '/api/events/:eventId/services/:serviceId/notes',
+          '/api/events/:eventId/services/stats',
+          '/api/events/admin/services/:serviceId/events',
         
           // 👇 Service endpoints
           '/api/services',
@@ -180,6 +268,19 @@ app.get('/api', (req, res) => {
           '/api/services/my/services',
           '/api/services/:id/media',
           '/api/services/admin/all',
+          
+          // 👇 Service Approval endpoints
+          '/api/services/approvals/request/:eventId/:serviceId',
+          '/api/services/approvals/my-requests',
+          '/api/services/approvals/service-owner',
+          '/api/services/approvals/:approvalId',
+          '/api/services/approvals/:approvalId/approve',
+          '/api/services/approvals/:approvalId/reject',
+          '/api/services/approvals/:approvalId/cancel',
+          '/api/services/approvals/stats/my-requests',
+          '/api/services/approvals/stats/service-owner',
+          '/api/services/approvals/admin/all',
+          '/api/services/approvals/admin/cleanup',
         ]
   });
 });
