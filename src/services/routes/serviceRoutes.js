@@ -118,7 +118,13 @@ const { authenticate } = require("../../auth/middleware/authMiddleware");
  * @swagger
  * /services/cards:
  *   get:
- *     summary: Get all service cards (minimal data for frontend listing)
+ *     summary: Get all service cards with filtering options (minimal data for frontend listing)
+ *     description: |
+ *       Retrieve service cards with optional filtering by:
+ *       - **Date Availability**: Filter services available on a specific date (excludes already booked services)
+ *       - **Location**: Filter by city and/or country
+ *       - **Category**: Filter by service category
+ *       - **Price Range**: Filter by minimum and/or maximum price
  *     tags: [Services]
  *     parameters:
  *       - in: query
@@ -159,6 +165,37 @@ const { authenticate } = require("../../auth/middleware/authMiddleware");
  *         schema:
  *           type: number
  *         description: Maximum price filter
+ *       - in: query
+ *         name: availableDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *           example: "2024-12-25"
+ *         description: |
+ *           Filter services available on this specific date. 
+ *           Excludes services that are already booked for events on this date.
+ *           Format: YYYY-MM-DD (e.g., "2024-12-25")
+ *     examples:
+ *       - name: Get all services
+ *         value: {}
+ *       - name: Filter by category and location
+ *         value:
+ *           category: "Photography"
+ *           city: "Lahore"
+ *       - name: Filter by available date and category
+ *         value:
+ *           availableDate: "2024-12-25"
+ *           category: "Catering"
+ *       - name: Complex filtering
+ *         value:
+ *           availableDate: "2024-12-25"
+ *           category: "Photography"
+ *           city: "Lahore"
+ *           country: "Pakistan"
+ *           minPrice: 1000
+ *           maxPrice: 5000
+ *           page: 1
+ *           limit: 10
  *     responses:
  *       200:
  *         description: List of service cards

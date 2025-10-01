@@ -77,11 +77,34 @@ Service media has the following fields:
 
 - `page`: Page number (default: 1)
 - `limit`: Items per page (default: 10)
-- `city`: Filter by city
-- `country`: Filter by country
-- `category`: Filter by category
+- `city`: Filter by city (case-insensitive partial match)
+- `country`: Filter by country (case-insensitive partial match)
+- `category`: Filter by category (exact match)
 - `minPrice`: Minimum price filter
 - `maxPrice`: Maximum price filter
+- `availableDate`: Filter services available on specific date (YYYY-MM-DD format, excludes already booked services)
+
+## Example API Calls
+
+### Get all services
+```
+GET /api/services/cards
+```
+
+### Filter by category and location
+```
+GET /api/services/cards?category=Photography&city=Lahore
+```
+
+### Filter by available date
+```
+GET /api/services/cards?availableDate=2024-12-25
+```
+
+### Complex filtering
+```
+GET /api/services/cards?availableDate=2024-12-25&category=Photography&city=Lahore&minPrice=1000&maxPrice=5000&page=1&limit=10
+```
 
 ## Example Service Creation
 

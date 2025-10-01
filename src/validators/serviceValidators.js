@@ -141,6 +141,24 @@ const getAllServicesSchema = (query) => {
     errors.push("Max price must be a number");
   }
 
+  if (query.availableDate) {
+    if (typeof query.availableDate !== "string") {
+      errors.push("Available date must be a string");
+    } else {
+      // Validate date format (YYYY-MM-DD)
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(query.availableDate)) {
+        errors.push("Available date must be in YYYY-MM-DD format");
+      } else {
+        // Check if it's a valid date
+        const date = new Date(query.availableDate);
+        if (isNaN(date.getTime())) {
+          errors.push("Available date must be a valid date");
+        }
+      }
+    }
+  }
+
   return { error: errors.length > 0 ? errors : null };
 };
 

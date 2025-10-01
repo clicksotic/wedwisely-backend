@@ -1,5 +1,7 @@
 const Service = require("../models/Service");
 const ServiceMedia = require("../../services-media/models/ServiceMedia");
+const Event = require("../../event/models/Event");
+const EventService = require("../../event/models/EventService");
 
 class ServiceService {
   async createService(vendorId, data) {
@@ -82,16 +84,55 @@ class ServiceService {
   async getAllServiceCards(filters = {}) {
     const query = { isActive: true };
     
-    // Apply filters
+    // Apply date availability filter (exclude services already booked on the specified date)
+    if (filters.availableDate) {
+      try {
+        // Parse the date and create date range for the entire day
+        const targetDate = new Date(filters.availableDate);
+        const startOfDay = new Date(targetDate);
+        startOfDay.setUTCHours(0, 0, 0, 0);
+        const endOfDay = new Date(targetDate);
+        endOfDay.setUTCHours(23, 59, 59, 999);
+
+        // Find events happening on the specified date
+        const eventsOnDate = await Event.find({
+          date: {
+            $gte: startOfDay,
+            $lte: endOfDay
+          }
+        }).select('_id');
+
+        // Find services already booked for those events
+        if (eventsOnDate.length > 0) {
+          const bookedServices = await EventService.find({
+            event: { $in: eventsOnDate.map(e => e._id) }
+          }).distinct('service');
+
+          // Exclude booked services from the main query
+          if (bookedServices.length > 0) {
+            query._id = { $nin: bookedServices };
+          }
+        }
+      } catch (error) {
+        // If date parsing fails, ignore the date filter
+        console.warn('Invalid date format for availableDate filter:', filters.availableDate);
+      }
+    }
+    
+    // Apply location filters
     if (filters.city) {
       query["location.city"] = new RegExp(filters.city, "i");
     }
     if (filters.country) {
       query["location.country"] = new RegExp(filters.country, "i");
     }
+    
+    // Apply category filter
     if (filters.category) {
       query.category = filters.category;
     }
+    
+    // Apply price filters
     if (filters.minPrice || filters.maxPrice) {
       query.price = {};
       if (filters.minPrice) query.price.$gte = Number(filters.minPrice);
