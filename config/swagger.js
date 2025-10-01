@@ -41,6 +41,7 @@ const options = {
     path.join(__dirname, "../src/event/routes/*.js"),
     path.join(__dirname, "../src/services/routes/*.js"),
     path.join(__dirname, "../src/services-media/routes/*.js"),
+    path.join(__dirname, "../src/packages/routes/*.js"),
   ],
 };
 

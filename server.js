@@ -153,6 +153,9 @@ app.use('/api/services', require('./src/services/routes/serviceApprovalRoutes'))
 // Service Media routes
 app.use("/api/services-media", require("./src/services-media/routes/serviceMediaRoutes"));
 
+// Packages routes
+app.use('/api/packages', require('./src/packages/routes/packageRoutes'));
+
 // Swagger routes with enhanced configuration
 app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   explorer: true,
