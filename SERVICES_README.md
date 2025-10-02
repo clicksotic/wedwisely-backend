@@ -60,7 +60,7 @@ Service media has the following fields:
 
 ### Services (Vendor only - requires authentication)
 - `POST /api/services` - Create a new service
-- `GET /api/services/my/services` - Get vendor's own services
+- `GET /api/services/my/services` - Get vendor's own services with filtering options
 - `PUT /api/services/:id` - Update a service
 - `DELETE /api/services/:id` - Delete a service (soft delete)
 
@@ -104,6 +104,24 @@ GET /api/services/cards?availableDate=2024-12-25
 ### Complex filtering
 ```
 GET /api/services/cards?availableDate=2024-12-25&category=Photography&city=Lahore&minPrice=1000&maxPrice=5000&page=1&limit=10
+```
+
+### Get vendor's own services
+```
+GET /api/services/my/services
+Authorization: Bearer <vendor-jwt-token>
+```
+
+### Filter vendor's services by category
+```
+GET /api/services/my/services?category=Photography
+Authorization: Bearer <vendor-jwt-token>
+```
+
+### Filter vendor's services with pagination
+```
+GET /api/services/my/services?category=Catering&city=Lahore&page=1&limit=5
+Authorization: Bearer <vendor-jwt-token>
 ```
 
 ## Example Service Creation

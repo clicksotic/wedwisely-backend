@@ -231,6 +231,85 @@ class ServiceService {
     await Service.findByIdAndUpdate(serviceId, { isActive: false });
     return { message: "Service deleted successfully" };
   }
+
+  // Get all services for a specific vendor (vendor's own services)
+  async getVendorServices(vendorId, filters = {}) {
+    const query = { 
+      vendor: vendorId,
+      isActive: true 
+    };
+    
+    // Apply filters
+    if (filters.category) {
+      query.category = filters.category;
+    }
+    if (filters.city) {
+      query["location.city"] = new RegExp(filters.city, "i");
+    }
+    if (filters.country) {
+      query["location.country"] = new RegExp(filters.country, "i");
+    }
+    if (filters.minPrice || filters.maxPrice) {
+      query.price = {};
+      if (filters.minPrice) query.price.$gte = Number(filters.minPrice);
+      if (filters.maxPrice) query.price.$lte = Number(filters.maxPrice);
+    }
+
+    // Pagination
+    const page = parseInt(filters.page) || 1;
+    const limit = parseInt(filters.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const services = await Service.find(query)
+      .populate("vendor", "firstName lastName email profilePicture")
+      .select("name description category price location isActive createdAt updatedAt")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    // Get first image for each service as baseImage
+    const servicesWithImages = await Promise.all(
+      services.map(async (service) => {
+        const firstImage = await ServiceMedia.findOne({ 
+          service: service._id, 
+          isActive: true 
+        }).sort({ createdAt: 1 }).select("mediaUrl");
+
+        return {
+          _id: service._id,
+          name: service.name,
+          description: service.description,
+          category: service.category,
+          price: service.price,
+          location: service.location,
+          isActive: service.isActive,
+          baseImage: firstImage?.mediaUrl || null,
+          vendor: {
+            _id: service.vendor._id,
+            name: `${service.vendor.firstName} ${service.vendor.lastName}`,
+            email: service.vendor.email,
+            profilePicture: service.vendor.profilePicture
+          },
+          createdAt: service.createdAt,
+          updatedAt: service.updatedAt
+        };
+      })
+    );
+
+    const total = await Service.countDocuments(query);
+
+    return {
+      services: servicesWithImages,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+        itemsPerPage: limit,
+        hasNext: page < Math.ceil(total / limit),
+        hasPrev: page > 1,
+      },
+    };
+  }
 }
 
 module.exports = new ServiceService();

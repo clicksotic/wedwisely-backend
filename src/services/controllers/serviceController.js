@@ -88,3 +88,20 @@ exports.deleteService = async (req, res, next) => {
     next(createError(400, err.message));
   }
 };
+
+// Get all services for a vendor (vendor's own services)
+exports.getVendorServices = async (req, res, next) => {
+  try {
+    if (req.user.role !== "vendor") {
+      return next(createError(403, "Only vendors can access their own services"));
+    }
+
+    const result = await serviceService.getVendorServices(req.user.id, req.query);
+    res.json({
+      message: "Vendor services retrieved successfully",
+      data: result
+    });
+  } catch (err) {
+    next(createError(500, err.message));
+  }
+};
