@@ -99,4 +99,21 @@ exports.deletePackage = async (req, res, next) => {
   }
 };
 
+// Get all packages for a vendor (vendor's own packages)
+exports.getVendorPackages = async (req, res, next) => {
+  try {
+    if (req.user.role !== "vendor") {
+      return next(createError(403, "Only vendors can access their own packages"));
+    }
+
+    const result = await packageService.getVendorPackages(req.user.id, req.query);
+    res.json({
+      message: "Vendor packages retrieved successfully",
+      data: result
+    });
+  } catch (err) {
+    next(createError(500, err.message));
+  }
+};
+
 

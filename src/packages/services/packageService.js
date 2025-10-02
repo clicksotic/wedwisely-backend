@@ -159,6 +159,7 @@ class PackageService {
   async getPackageCard(packageId) {
     const pkg = await Package.findOne({ _id: packageId, isActive: true })
       .populate("vendor", "firstName lastName profilePicture")
+      .populate("services", "category")
       .select("name price vendor services createdAt");
 
     if (!pkg) return null;
@@ -173,12 +174,20 @@ class PackageService {
       baseImage = firstImage?.mediaUrl || null;
     }
 
+    // Extract unique categories from services
+    const categories = [...new Set(
+      (pkg.services || [])
+        .filter(service => service && service.category)
+        .map(service => service.category)
+    )];
+
     return {
       _id: pkg._id,
       name: pkg.name,
       price: pkg.price,
       baseImage,
       servicesCount: pkg.services?.length || 0,
+      categories: categories,
       vendor: {
         _id: pkg.vendor._id,
         name: `${pkg.vendor.firstName} ${pkg.vendor.lastName}`,
@@ -204,6 +213,7 @@ class PackageService {
 
     let pkgs = await Package.find(query)
       .populate("vendor", "firstName lastName profilePicture")
+      .populate("services", "category")
       .select("name price vendor services createdAt")
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -244,18 +254,133 @@ class PackageService {
             .select("mediaUrl");
           baseImage = firstImage?.mediaUrl || null;
         }
+
+        // Extract unique categories from services
+        const categories = [...new Set(
+          (pkg.services || [])
+            .filter(service => service && service.category)
+            .map(service => service.category)
+        )];
+
         return {
           _id: pkg._id,
           name: pkg.name,
           price: pkg.price,
           baseImage,
           servicesCount: pkg.services?.length || 0,
+          categories: categories,
           vendor: {
             _id: pkg.vendor._id,
             name: `${pkg.vendor.firstName} ${pkg.vendor.lastName}`,
             profilePicture: pkg.vendor.profilePicture,
           },
           createdAt: pkg.createdAt,
+        };
+      })
+    );
+
+    const total = filters.date ? pkgs.length : await Package.countDocuments(query);
+
+    return {
+      packages: packagesWithImages,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+        itemsPerPage: limit,
+        hasNext: page < Math.ceil(total / limit),
+        hasPrev: page > 1,
+      },
+    };
+  }
+
+  // Get all packages for a specific vendor (vendor's own packages)
+  async getVendorPackages(vendorId, filters = {}) {
+    const query = { 
+      vendor: vendorId,
+      isActive: true 
+    };
+    
+    // Apply filters
+    if (filters.minPrice || filters.maxPrice) {
+      query.price = {};
+      if (filters.minPrice) query.price.$gte = Number(filters.minPrice);
+      if (filters.maxPrice) query.price.$lte = Number(filters.maxPrice);
+    }
+
+    // Pagination
+    const page = parseInt(filters.page) || 1;
+    const limit = parseInt(filters.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    let pkgs = await Package.find(query)
+      .populate("vendor", "firstName lastName email profilePicture")
+      .populate("services", "category")
+      .select("name description price vendor services isActive createdAt updatedAt")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    // Date availability filtering (same logic as getAllPackageCards)
+    if (filters.date) {
+      const date = new Date(filters.date);
+      if (!isNaN(date.getTime())) {
+        const start = new Date(date);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(date);
+        end.setHours(23, 59, 59, 999);
+
+        const Event = require("../../event/models/Event");
+        const EventService = require("../../event/models/EventService");
+        const eventsOnDate = await Event.find({ date: { $gte: start, $lte: end } }).select("_id");
+        const eventIds = eventsOnDate.map(e => e._id);
+
+        if (eventIds.length > 0) {
+          const busyServiceLinks = await EventService.find({ event: { $in: eventIds }, status: "confirmed" }).select("service");
+          const busyServiceIds = new Set(busyServiceLinks.map(l => String(l.service)));
+          pkgs = pkgs.filter(pkg => {
+            const allServices = (pkg.services || []).map(s => String(s._id || s));
+            return allServices.every(sid => !busyServiceIds.has(sid));
+          });
+        }
+      }
+    }
+
+    const packagesWithImages = await Promise.all(
+      pkgs.map(async (pkg) => {
+        let baseImage = null;
+        if (pkg.services && pkg.services.length > 0) {
+          const firstServiceId = pkg.services[0];
+          const firstImage = await ServiceMedia.findOne({ service: firstServiceId, isActive: true })
+            .sort({ createdAt: 1 })
+            .select("mediaUrl");
+          baseImage = firstImage?.mediaUrl || null;
+        }
+
+        // Extract unique categories from services
+        const categories = [...new Set(
+          (pkg.services || [])
+            .filter(service => service && service.category)
+            .map(service => service.category)
+        )];
+
+        return {
+          _id: pkg._id,
+          name: pkg.name,
+          description: pkg.description,
+          price: pkg.price,
+          isActive: pkg.isActive,
+          baseImage,
+          servicesCount: pkg.services?.length || 0,
+          categories: categories,
+          vendor: {
+            _id: pkg.vendor._id,
+            name: `${pkg.vendor.firstName} ${pkg.vendor.lastName}`,
+            email: pkg.vendor.email,
+            profilePicture: pkg.vendor.profilePicture,
+          },
+          createdAt: pkg.createdAt,
+          updatedAt: pkg.updatedAt,
         };
       })
     );

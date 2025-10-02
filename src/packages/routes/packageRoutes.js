@@ -24,6 +24,11 @@
  *         servicesCount:
  *           type: integer
  *           description: Number of services in the package
+ *         categories:
+ *           type: array
+ *           items:
+ *             type: string
+ *           description: Unique list of service categories in the package
  *         baseImage:
  *           type: string
  *           description: Image derived from the first service's first media
@@ -332,6 +337,123 @@ router.put("/:id", authenticate, validateRequest(updatePackageSchema), packageCo
  *         description: Package not found
  */
 router.delete("/:id", authenticate, packageController.deletePackage);
+
+/**
+ * @swagger
+ * /packages/my/packages:
+ *   get:
+ *     summary: Get all packages for the authenticated vendor
+ *     description: |
+ *       Retrieve all packages created by the authenticated vendor with optional filtering.
+ *       This endpoint is only accessible to vendors and shows their own packages.
+ *     tags: [Packages]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of packages per page
+ *       - in: query
+ *         name: minPrice
+ *         schema:
+ *           type: number
+ *         description: Minimum price filter
+ *       - in: query
+ *         name: maxPrice
+ *         schema:
+ *           type: number
+ *         description: Maximum price filter
+ *       - in: query
+ *         name: date
+ *         schema:
+ *           type: string
+ *           format: date
+ *           example: "2024-12-25"
+ *         description: Filter packages available on this specific date (excludes packages with any booked services)
+ *     responses:
+ *       200:
+ *         description: Vendor packages retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Vendor packages retrieved successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     packages:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                           name:
+ *                             type: string
+ *                           description:
+ *                             type: string
+ *                           price:
+ *                             type: number
+ *                           isActive:
+ *                             type: boolean
+ *                           baseImage:
+ *                             type: string
+ *                           servicesCount:
+ *                             type: integer
+ *                           categories:
+ *                             type: array
+ *                             items:
+ *                               type: string
+ *                           vendor:
+ *                             type: object
+ *                             properties:
+ *                               _id:
+ *                                 type: string
+ *                               name:
+ *                                 type: string
+ *                               email:
+ *                                 type: string
+ *                               profilePicture:
+ *                                 type: string
+ *                           createdAt:
+ *                             type: string
+ *                             format: date-time
+ *                           updatedAt:
+ *                             type: string
+ *                             format: date-time
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         currentPage:
+ *                           type: integer
+ *                         totalPages:
+ *                           type: integer
+ *                         totalItems:
+ *                           type: integer
+ *                         itemsPerPage:
+ *                           type: integer
+ *                         hasNext:
+ *                           type: boolean
+ *                         hasPrev:
+ *                           type: boolean
+ *       403:
+ *         description: Forbidden (only vendors can access their own packages)
+ *       500:
+ *         description: Server error
+ */
+router.get("/my/packages", authenticate, validateRequest(getAllPackagesSchema, "query"), packageController.getVendorPackages);
 
 module.exports = router;
 
