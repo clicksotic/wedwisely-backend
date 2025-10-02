@@ -397,4 +397,133 @@ router.put("/:id", authenticate, validateRequest(updateServiceSchema), serviceCo
  */
 router.delete("/:id", authenticate, serviceController.deleteService);
 
+/**
+ * @swagger
+ * /services/my/services:
+ *   get:
+ *     summary: Get all services for the authenticated vendor
+ *     description: |
+ *       Retrieve all services created by the authenticated vendor with optional filtering.
+ *       This endpoint is only accessible to vendors and shows their own services.
+ *     tags: [Services]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 10
+ *         description: Number of services per page
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *           enum: [Photography, Catering, Decoration, Music, Transportation, Venue, Others]
+ *         description: Filter by category
+ *       - in: query
+ *         name: city
+ *         schema:
+ *           type: string
+ *         description: Filter by city (case-insensitive partial match)
+ *       - in: query
+ *         name: country
+ *         schema:
+ *           type: string
+ *         description: Filter by country (case-insensitive partial match)
+ *       - in: query
+ *         name: minPrice
+ *         schema:
+ *           type: number
+ *         description: Minimum price filter
+ *       - in: query
+ *         name: maxPrice
+ *         schema:
+ *           type: number
+ *         description: Maximum price filter
+ *     responses:
+ *       200:
+ *         description: Vendor services retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Vendor services retrieved successfully"
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     services:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           _id:
+ *                             type: string
+ *                           name:
+ *                             type: string
+ *                           description:
+ *                             type: string
+ *                           category:
+ *                             type: string
+ *                           price:
+ *                             type: number
+ *                           location:
+ *                             type: object
+ *                             properties:
+ *                               city:
+ *                                 type: string
+ *                               country:
+ *                                 type: string
+ *                           isActive:
+ *                             type: boolean
+ *                           baseImage:
+ *                             type: string
+ *                           vendor:
+ *                             type: object
+ *                             properties:
+ *                               _id:
+ *                                 type: string
+ *                               name:
+ *                                 type: string
+ *                               email:
+ *                                 type: string
+ *                               profilePicture:
+ *                                 type: string
+ *                           createdAt:
+ *                             type: string
+ *                             format: date-time
+ *                           updatedAt:
+ *                             type: string
+ *                             format: date-time
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         currentPage:
+ *                           type: integer
+ *                         totalPages:
+ *                           type: integer
+ *                         totalItems:
+ *                           type: integer
+ *                         itemsPerPage:
+ *                           type: integer
+ *                         hasNext:
+ *                           type: boolean
+ *                         hasPrev:
+ *                           type: boolean
+ *       403:
+ *         description: Forbidden (only vendors can access their own services)
+ *       500:
+ *         description: Server error
+ */
+router.get("/my/services", authenticate, validateRequest(getAllServicesSchema, "query"), serviceController.getVendorServices);
+
 module.exports = router;
